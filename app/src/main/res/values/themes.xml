@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.NetSentinel" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary Brand Colors -->
+        <item name="colorPrimary">@color/bg_dark_navy</item>
+        <item name="colorOnPrimary">@color/text_primary</item>
+        <item name="colorSecondary">@color/neon_green</item>
+        <item name="colorOnSecondary">@color/bg_dark_navy</item>
+        <item name="colorTertiary">@color/cyber_cyan</item>
+
+        <!-- Status & Navigation Bars -->
+        <item name="android:statusBarColor">@color/bg_dark_navy</item>
+        <item name="android:navigationBarColor">@color/bg_dark_navy</item>
+        <item name="android:windowBackground">@color/bg_dark_navy</item>
+
+        <!-- Card & Surface Styles -->
+        <item name="colorSurface">@color/surface_dark_card</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/surface_card_elevated</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        
+        <item name="colorError">@color/alert_red</item>
+        <item name="colorOnError">@color/text_primary</item>
+    </style>
+
+    <!-- Rounded 16dp Cyber Card Style -->
+    <style name="CyberCard">
+        <item name="cardBackgroundColor">@color/surface_dark_card</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">4dp</item>
+        <item name="strokeColor">@color/surface_border_glow</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <style name="CyberCard.Elevated">
+        <item name="cardBackgroundColor">@color/surface_card_elevated</item>
+    </style>
+</resources>

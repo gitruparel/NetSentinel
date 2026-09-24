@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/nav_dashboard">
+
+    <fragment
+        android:id="@+id/nav_dashboard"
+        android:name="com.netsentinel.app.ui.dashboard.DashboardFragment"
+        android:label="@string/title_dashboard"
+        tools:layout="@layout/fragment_dashboard" />
+
+    <fragment
+        android:id="@+id/nav_hunt"
+        android:name="com.netsentinel.app.ui.hunt.HuntFragment"
+        android:label="@string/title_hunt"
+        tools:layout="@layout/fragment_hunt" />
+
+    <fragment
+        android:id="@+id/nav_map"
+        android:name="com.netsentinel.app.ui.map.ThreatMapFragment"
+        android:label="@string/title_map"
+        tools:layout="@layout/fragment_threat_map" />
+
+    <fragment
+        android:id="@+id/nav_logs"
+        android:name="com.netsentinel.app.ui.logs.IncidentLogsFragment"
+        android:label="@string/title_logs"
+        tools:layout="@layout/fragment_incident_logs">
+        <action
+            android:id="@+id/action_logs_to_details"
+            app:destination="@id/nav_details" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_details"
+        android:name="com.netsentinel.app.ui.logs.IncidentDetailsFragment"
+        android:label="Incident Details"
+        tools:layout="@layout/fragment_incident_details" />
+
+    <fragment
+        android:id="@+id/nav_simulation"
+        android:name="com.netsentinel.app.ui.simulation.DevSimulationFragment"
+        android:label="@string/title_simulation"
+        tools:layout="@layout/fragment_dev_simulation" />
+
+    <fragment
+        android:id="@+id/nav_settings"
+        android:name="com.netsentinel.app.ui.settings.SettingsFragment"
+        android:label="@string/title_settings"
+        tools:layout="@layout/fragment_settings" />
+</navigation>

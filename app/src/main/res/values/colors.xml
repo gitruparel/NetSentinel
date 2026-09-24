@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Day Light Theme Palette -->
+    <color name="bg_dark_navy">#F1F5F9</color>
+    <color name="surface_dark_card">#FFFFFF</color>
+    <color name="surface_card_elevated">#E2E8F0</color>
+    <color name="surface_border_glow">#CBD5E1</color>
+
+    <color name="neon_green">#00A859</color>
+    <color name="neon_green_alpha20">#2200A859</color>
+    <color name="cyber_cyan">#00838F</color>
+    <color name="cyber_cyan_alpha20">#2200838F</color>
+    <color name="alert_red">#D32F2F</color>
+    <color name="alert_red_alpha20">#22D32F2F</color>
+    <color name="warning_yellow">#F57F17</color>
+    <color name="warning_yellow_alpha20">#22F57F17</color>
+
+    <color name="glass_card_bg">#EEFFFFFF</color>
+    <color name="glass_card_border">#3300838F</color>
+
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#475569</color>
+    <color name="text_tertiary">#64748B</color>
+
+    <!-- Material Theme Mapping -->
+    <color name="colorPrimary">#F1F5F9</color>
+    <color name="colorOnPrimary">#0F172A</color>
+    <color name="colorSecondary">#00A859</color>
+    <color name="colorOnSecondary">#FFFFFF</color>
+    <color name="colorTertiary">#00838F</color>
+    <color name="colorBackground">#F1F5F9</color>
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorOnSurface">#0F172A</color>
+    <color name="colorError">#D32F2F</color>
+</resources>

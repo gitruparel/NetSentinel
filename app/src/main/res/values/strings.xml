@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NetSentinel</string>
+    <string name="app_tagline">Mobile Network Security Auditor</string>
+    <string name="app_version">v1.0.0-PRO (NetTrust Engine v2.4)</string>
+
+    <!-- Navigation Titles -->
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_hunt">Hunt Mode</string>
+    <string name="title_map">Threat Map</string>
+    <string name="title_logs">Incident Logs</string>
+    <string name="title_simulation">Dev Simulation</string>
+    <string name="title_settings">Settings</string>
+
+    <!-- Actions -->
+    <string name="btn_start_audit">Start Audit</string>
+    <string name="btn_hunt_mode">Hunt Mode</string>
+    <string name="btn_view_threat_map">View Threat Map</string>
+    <string name="btn_start_hunt">Start Target Hunt</string>
+    <string name="btn_stop_hunt">Stop Target Hunt</string>
+    <string name="btn_center_location">Center My Location</string>
+    <string name="btn_export_report">Export Security Report (PDF)</string>
+
+    <!-- Simulation Labels -->
+    <string name="sim_ssid_spoof">Duplicate SSID (Evil Twin)</string>
+    <string name="sim_gateway_change">Gateway ARP Change</string>
+    <string name="sim_dns_change">Rogue DNS Resolver</string>
+    <string name="sim_latency_spike">Latency Spike (Intercept)</string>
+    <string name="sim_packet_loss">Packet Loss (Jamming)</string>
+    <string name="sim_security_downgrade">Security Downgrade</string>
+</resources>

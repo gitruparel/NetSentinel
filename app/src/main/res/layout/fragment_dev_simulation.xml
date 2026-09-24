@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark_navy"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Live Simulated NetTrust Score Card -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/CyberCard"
+            android:layout_width="match_parent"
+            android:layout_height="240dp">
+
+            <com.netsentinel.app.ui.components.CircularTrustScoreView
+                android:id="@+id/sim_trust_score_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_gravity="center" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Simulation Controls Header -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Attack Simulation Controls"
+            android:textColor="@color/cyber_cyan"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Toggle security vulnerabilities to test real-time NetTrust Engine threat scoring and incident generation."
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
+
+        <!-- Switches Card Container -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/CyberCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="72dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- Switch 1: Duplicate SSID -->
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_duplicate_ssid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/sim_ssid_spoof"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    app:thumbTint="@color/alert_red"
+                    app:trackTint="@color/alert_red_alpha20" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="8dp"
+                    android:background="@color/surface_border_glow" />
+
+                <!-- Switch 2: Gateway Change -->
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_gateway_change"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/sim_gateway_change"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    app:thumbTint="@color/warning_yellow"
+                    app:trackTint="@color/warning_yellow_alpha20" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="8dp"
+                    android:background="@color/surface_border_glow" />
+
+                <!-- Switch 3: DNS Change -->
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_dns_change"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/sim_dns_change"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    app:thumbTint="@color/alert_red"
+                    app:trackTint="@color/alert_red_alpha20" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="8dp"
+                    android:background="@color/surface_border_glow" />
+
+                <!-- Switch 4: Latency Spike -->
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_latency_spike"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/sim_latency_spike"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    app:thumbTint="@color/cyber_cyan"
+                    app:trackTint="@color/cyber_cyan_alpha20" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="8dp"
+                    android:background="@color/surface_border_glow" />
+
+                <!-- Switch 5: Packet Loss -->
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_packet_loss"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/sim_packet_loss"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    app:thumbTint="@color/warning_yellow"
+                    app:trackTint="@color/warning_yellow_alpha20" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="8dp"
+                    android:background="@color/surface_border_glow" />
+
+                <!-- Switch 6: Security Downgrade -->
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_security_downgrade"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/sim_security_downgrade"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    app:thumbTint="@color/alert_red"
+                    app:trackTint="@color/alert_red_alpha20" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Threat Injection to Room DB Actions -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_inject_threat_db"
+            style="@style/Widget.Material3.Button"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:backgroundTint="@color/alert_red"
+            android:text="Log Active Threat to Room DB"
+            android:textColor="@color/bg_dark_navy"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:cornerRadius="16dp"
+            app:icon="@drawable/ic_incident_logs"
+            app:iconTint="@color/bg_dark_navy" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_view_logs_now"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="72dp"
+            android:text="View Stored Incidents in Logs"
+            android:textColor="@color/cyber_cyan"
+            app:cornerRadius="16dp"
+            app:strokeColor="@color/cyber_cyan" />
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>
