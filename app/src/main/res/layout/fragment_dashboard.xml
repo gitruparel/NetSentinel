@@ -25,6 +25,126 @@
 
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Acoustic Threat Siren (Intrusion Alert System) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_acoustic_siren"
+            style="@style/CyberCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardPreventCornerOverlap="false"
+            app:strokeColor="@color/cyber_cyan"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:id="@+id/iv_siren_icon"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_siren"
+                            app:tint="@color/neon_green"
+                            android:contentDescription="Siren Alarm Icon" />
+
+                        <TextView
+                            android:id="@+id/tv_siren_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="Acoustic Threat Siren"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_siren_status_badge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:background="@drawable/bg_badge_secure"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp"
+                        android:text="SIREN ARMED"
+                        android:textColor="@color/neon_green"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                </RelativeLayout>
+
+                <TextView
+                    android:id="@+id/tv_siren_desc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Tactical audio intrusion alert. Broadcasts high-decibel acoustic siren upon critical RF anomalies, Evil Twin spoofing, or rogue AP detections."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:lineSpacingExtra="2dp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="12dp"
+                    android:background="@color/surface_border_glow" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <!-- Sound Alarm Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_sound_siren"
+                        style="@style/Widget.Material3.Button"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="6dp"
+                        android:text="Sound Siren"
+                        android:textColor="@color/bg_dark_navy"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        app:backgroundTint="@color/alert_red"
+                        app:cornerRadius="10dp"
+                        app:icon="@drawable/ic_siren"
+                        app:iconSize="18dp"
+                        app:iconTint="@color/bg_dark_navy" />
+
+                    <!-- Silence / Mute Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_silence_siren"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        android:text="Silence / Mute"
+                        android:textColor="@color/cyber_cyan"
+                        android:textSize="13sp"
+                        app:cornerRadius="10dp"
+                        app:strokeColor="@color/cyber_cyan" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Connected Wi-Fi Telemetry Card -->
         <com.google.android.material.card.MaterialCardView
             style="@style/CyberCard"

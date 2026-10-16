@@ -3,6 +3,7 @@ package com.netsentinel.app.ui.simulation
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.netsentinel.app.NetSentinelApp
 import com.netsentinel.app.data.model.Fingerprint
 import com.netsentinel.app.data.model.Incident
 import com.netsentinel.app.data.model.SimulationState
@@ -27,7 +28,7 @@ import java.util.Date
 import java.util.Locale
 
 class DevSimulationViewModel(
-    private val networkRepository: NetworkRepository = FakeNetworkRepository(),
+    private var networkRepository: NetworkRepository = FakeNetworkRepository(),
     private val calculateTrustScoreUseCase: CalculateTrustScoreUseCase = CalculateTrustScoreUseCase()
 ) : ViewModel() {
 
@@ -48,8 +49,20 @@ class DevSimulationViewModel(
     }
 
     fun initContext(context: Context) {
-        this.incidentRepository = RoomIncidentRepository(context)
-        this.locationCollector = GpsLocationCollector(context)
+        val app = context.applicationContext as? NetSentinelApp
+        if (app != null) {
+            val scanner = app.container.networkScanner
+            this.networkRepository = object : NetworkRepository {
+                override fun getNetworkSnapshot() = scanner.captureSnapshot()
+                override fun observeNetworkState() = MutableStateFlow(scanner.captureSnapshot())
+            }
+            this.incidentRepository = app.container.incidentRepository
+            this.locationCollector = app.container.locationCollector
+        } else {
+            this.incidentRepository = RoomIncidentRepository(context)
+            this.locationCollector = GpsLocationCollector(context)
+        }
+        reevaluateScore()
     }
 
     fun updateToggle(
@@ -73,15 +86,27 @@ class DevSimulationViewModel(
     }
 
     private fun reevaluateScore() {
-        val snapshot = networkRepository.getNetworkSnapshot()
-        val eval = calculateTrustScoreUseCase(snapshot, _simulationState.value)
-        _liveTrustScore.value = eval.trustScore
+        viewModelScope.launch(Dispatchers.IO) {
+            val snapshot = networkRepository.getNetworkSnapshot()
+            val eval = calculateTrustScoreUseCase(
+                snapshot = snapshot,
+                simulationState = _simulationState.value,
+                expectedGateway = "192.168.1.1",
+                expectedDns = "1.1.1.1"
+            )
+            _liveTrustScore.value = eval.trustScore
+        }
     }
 
     fun injectSimulatedThreatToDb() {
         viewModelScope.launch(Dispatchers.IO) {
             val snapshot = networkRepository.getNetworkSnapshot()
-            val eval = calculateTrustScoreUseCase(snapshot, _simulationState.value)
+            val eval = calculateTrustScoreUseCase(
+                snapshot = snapshot,
+                simulationState = _simulationState.value,
+                expectedGateway = "192.168.1.1",
+                expectedDns = "1.1.1.1"
+            )
 
             val simState = _simulationState.value
             val title = when {
@@ -132,7 +157,7 @@ class DevSimulationViewModel(
             )
 
             incidentRepository?.addIncident(incident)
-            _injectEvent.emit("Simulated Incident $incidentId recorded to Room DB!")
+            _injectEvent.emit("Simulated Incident $incidentId recorded to Database & Synced!")
         }
     }
 }

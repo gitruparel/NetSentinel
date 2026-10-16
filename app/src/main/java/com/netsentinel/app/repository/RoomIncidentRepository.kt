@@ -5,31 +5,32 @@ import com.netsentinel.app.data.model.Fingerprint
 import com.netsentinel.app.data.model.Incident
 import com.netsentinel.app.data.model.NetworkSnapshot
 import com.netsentinel.app.data.model.TimelineEvent
-import com.netsentinel.app.database.FirestoreManager
 import com.netsentinel.app.database.NetSentinelDatabase
+import com.netsentinel.app.database.SupabaseManager
 import com.netsentinel.app.database.entity.IncidentEntity
 import com.netsentinel.app.engine.ThreatSeverity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 class RoomIncidentRepository(context: Context) : IncidentRepository {
 
     private val db = NetSentinelDatabase.getDatabase(context)
     private val incidentDao = db.incidentDao()
-    private val firestoreManager = FirestoreManager(context)
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val supabaseManager = SupabaseManager(context)
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
-        // Pre-populate initial forensic incidents if database is empty
-        scope.launch {
-            if (incidentDao.getAllIncidents().isEmpty()) {
+        // Pre-populate benchmark security incidents if database is empty
+        repositoryScope.launch {
+            if (incidentDao.getIncidentCount() == 0) {
                 val initialList = FakeIncidentRepository().getAllIncidents()
                 for (item in initialList) {
-                    addIncident(item)
+                    insertInternal(item)
                 }
             }
         }
@@ -39,45 +40,54 @@ class RoomIncidentRepository(context: Context) : IncidentRepository {
         entities.map { it.toDomainModel() }
     }
 
-    override fun getAllIncidents(): List<Incident> = runBlocking(Dispatchers.IO) {
+    override fun observeIncidents(): Flow<List<Incident>> = incidentsFlow
+
+    override suspend fun getAllIncidents(): List<Incident> = withContext(Dispatchers.IO) {
         incidentDao.getAllIncidents().map { it.toDomainModel() }
     }
 
-    override fun getIncidentById(id: String): Incident? = runBlocking(Dispatchers.IO) {
+    override suspend fun getIncidentById(id: String): Incident? = withContext(Dispatchers.IO) {
         incidentDao.getIncidentById(id)?.toDomainModel()
     }
 
-    override fun addIncident(incident: Incident) {
-        scope.launch {
-            incidentDao.insertIncident(incident.toEntity())
-            firestoreManager.saveIncident(incident)
+    override suspend fun addIncident(incident: Incident) {
+        insertInternal(incident)
+    }
+
+    private suspend fun insertInternal(incident: Incident) = withContext(Dispatchers.IO) {
+        incidentDao.insertIncident(incident.toEntity())
+        repositoryScope.launch {
+            try {
+                supabaseManager.saveIncident(incident)
+            } catch (e: Exception) {
+                // Background sync failure handled gracefully
+            }
         }
     }
 
-    fun updateIncidentPhoto(id: String, photoUri: String) {
-        scope.launch {
-            incidentDao.updatePhotoUri(id, photoUri)
-            incidentDao.getIncidentById(id)?.toDomainModel()?.let {
-                firestoreManager.saveIncident(it)
+    suspend fun updateIncidentPhoto(id: String, photoUri: String) = withContext(Dispatchers.IO) {
+        incidentDao.updatePhotoUri(id, photoUri)
+        val updated = incidentDao.getIncidentById(id)?.toDomainModel()
+        if (updated != null) {
+            repositoryScope.launch {
+                try {
+                    supabaseManager.saveIncident(updated)
+                } catch (_: Exception) {}
             }
         }
     }
 
     val incidentCountFlow: Flow<Int> = incidentDao.getIncidentCountFlow()
 
-    fun clearAllIncidents() {
-        scope.launch {
-            incidentDao.deleteAllIncidents()
-        }
+    suspend fun clearAllIncidents() = withContext(Dispatchers.IO) {
+        incidentDao.deleteAllIncidents()
     }
 
-    fun resetToDefaultIncidents() {
-        scope.launch {
-            incidentDao.deleteAllIncidents()
-            val initialList = FakeIncidentRepository().getAllIncidents()
-            for (item in initialList) {
-                incidentDao.insertIncident(item.toEntity())
-            }
+    suspend fun resetToDefaultIncidents() = withContext(Dispatchers.IO) {
+        incidentDao.deleteAllIncidents()
+        val initialList = FakeIncidentRepository().getAllIncidents()
+        for (item in initialList) {
+            incidentDao.insertIncident(item.toEntity())
         }
     }
 
@@ -88,16 +98,23 @@ class RoomIncidentRepository(context: Context) : IncidentRepository {
             ThreatSeverity.HIGH
         }
 
+        val parsedDns = if (this.dnsServersJson.isBlank()) {
+            emptyList()
+        } else {
+            this.dnsServersJson.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        }
+
         val snapshot = NetworkSnapshot(
             ssid = this.ssid,
             bssid = this.bssid,
             rssi = this.rssi,
             gatewayIp = this.gatewayIp,
-            dnsServers = listOf(this.dnsServersJson),
-            frequencyMhz = 5240,
+            dnsServers = parsedDns,
+            frequencyMhz = this.frequencyMhz,
             securityType = this.securityType,
-            rttMs = 14L,
-            packetLossPercent = 0.0
+            rttMs = this.rttMs,
+            packetLossPercent = this.packetLossPercent,
+            isConnected = this.ssid != "Wi-Fi Disconnected" && this.bssid != "00:00:00:00:00:00"
         )
 
         val fingerprint = Fingerprint(
@@ -121,9 +138,9 @@ class RoomIncidentRepository(context: Context) : IncidentRepository {
             networkDetails = snapshot,
             fingerprint = fingerprint,
             timeline = listOf(
-                TimelineEvent("10:41:50 AM", "Initial Wi-Fi baseline scan executed", "NORMAL"),
-                TimelineEvent("10:42:01 AM", "Multi-vector telemetry anomaly flagged", "ALERT"),
-                TimelineEvent("10:42:05 AM", "Incident logged & evidence archived", "QUARANTINED")
+                TimelineEvent("10:41:50 AM", "Baseline telemetry scan recorded", "NORMAL"),
+                TimelineEvent("10:42:01 AM", "Multi-vector anomaly flagged: ${this.title}", "ALERT"),
+                TimelineEvent("10:42:05 AM", "Incident logged & forensic evidence preserved", this.status)
             ),
             evidencePhotoPlaceholder = this.photoUri ?: "SPECTRUM_CAPTURE_042.PNG",
             gpsCoordinatesFormatted = this.gpsCoordinatesFormatted
@@ -148,7 +165,10 @@ class RoomIncidentRepository(context: Context) : IncidentRepository {
             securityType = this.networkDetails.securityType,
             ouiVendor = this.fingerprint.ouiVendor,
             photoUri = if (this.evidencePhotoPlaceholder.startsWith("content://") || this.evidencePhotoPlaceholder.startsWith("file://")) this.evidencePhotoPlaceholder else null,
-            gpsCoordinatesFormatted = this.gpsCoordinatesFormatted
+            gpsCoordinatesFormatted = this.gpsCoordinatesFormatted,
+            frequencyMhz = this.networkDetails.frequencyMhz,
+            rttMs = this.networkDetails.rttMs,
+            packetLossPercent = this.networkDetails.packetLossPercent
         )
     }
 }

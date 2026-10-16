@@ -3,19 +3,20 @@ package com.netsentinel.app.ui.dashboard
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.netsentinel.app.NetSentinelApp
 import com.netsentinel.app.data.model.AuditSession
 import com.netsentinel.app.data.model.Incident
 import com.netsentinel.app.data.model.NetworkSnapshot
 import com.netsentinel.app.data.model.SimulationState
 import com.netsentinel.app.data.model.TimelineEvent
+import com.netsentinel.app.database.entity.BaselineNetworkEntity
 import com.netsentinel.app.domain.usecases.CalculateTrustScoreUseCase
 import com.netsentinel.app.network.NetworkScanner
 import com.netsentinel.app.repository.AuditRepository
+import com.netsentinel.app.repository.BaselineRepository
 import com.netsentinel.app.repository.FakeNetworkRepository
 import com.netsentinel.app.repository.IncidentRepository
 import com.netsentinel.app.repository.NetworkRepository
-import com.netsentinel.app.repository.RoomAuditRepository
-import com.netsentinel.app.repository.RoomIncidentRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,27 +42,55 @@ class DashboardViewModel(
 
     private var auditRepository: AuditRepository? = null
     private var incidentRepository: IncidentRepository? = null
+    private var baselineRepository: BaselineRepository? = null
     private var currentSimulation = SimulationState()
+    private var isRealTelemetryInitialized = false
 
     init {
         refreshDashboard()
     }
 
     fun initRealTelemetry(context: Context) {
-        val scanner = NetworkScanner(context)
-        this.networkRepository = object : NetworkRepository {
-            override fun getNetworkSnapshot(): NetworkSnapshot = scanner.captureSnapshot()
-            override fun observeNetworkState() = MutableStateFlow(scanner.captureSnapshot())
+        if (isRealTelemetryInitialized) return
+        val app = context.applicationContext as? NetSentinelApp
+        if (app != null) {
+            val scanner = app.container.networkScanner
+            this.networkRepository = object : NetworkRepository {
+                override fun getNetworkSnapshot(): NetworkSnapshot = scanner.captureSnapshot()
+                override fun observeNetworkState() = MutableStateFlow(scanner.captureSnapshot())
+            }
+            this.auditRepository = app.container.auditRepository
+            this.incidentRepository = app.container.incidentRepository
+            this.baselineRepository = app.container.baselineRepository
+        } else {
+            val scanner = NetworkScanner(context)
+            this.networkRepository = object : NetworkRepository {
+                override fun getNetworkSnapshot(): NetworkSnapshot = scanner.captureSnapshot()
+                override fun observeNetworkState() = MutableStateFlow(scanner.captureSnapshot())
+            }
         }
-        this.auditRepository = RoomAuditRepository(context, networkRepository)
-        this.incidentRepository = RoomIncidentRepository(context)
+        isRealTelemetryInitialized = true
         refreshDashboard()
     }
 
     fun refreshDashboard() {
         viewModelScope.launch(Dispatchers.IO) {
             val snapshot = networkRepository.getNetworkSnapshot()
-            val eval = calculateTrustScoreUseCase(snapshot, currentSimulation)
+
+            val baseline = if (snapshot.isConnected && snapshot.ssid.isNotEmpty()) {
+                baselineRepository?.getBaselineForSsid(snapshot.ssid)
+            } else null
+
+            val expectedGateway = baseline?.expectedGateway ?: ""
+            val expectedDns = baseline?.expectedDnsJson ?: ""
+
+            val eval = calculateTrustScoreUseCase(
+                snapshot = snapshot,
+                simulationState = currentSimulation,
+                expectedGateway = expectedGateway,
+                expectedDns = expectedDns
+            )
+
             _uiState.value = DashboardUiState.Success(
                 snapshot = eval.evaluatedSnapshot,
                 trustScore = eval.trustScore,
@@ -73,7 +102,20 @@ class DashboardViewModel(
     fun runHardwareAudit() {
         viewModelScope.launch(Dispatchers.IO) {
             val snapshot = networkRepository.getNetworkSnapshot()
-            val eval = calculateTrustScoreUseCase(snapshot, currentSimulation)
+
+            val baseline = if (snapshot.isConnected && snapshot.ssid.isNotEmpty()) {
+                baselineRepository?.getBaselineForSsid(snapshot.ssid)
+            } else null
+
+            val expectedGateway = baseline?.expectedGateway ?: ""
+            val expectedDns = baseline?.expectedDnsJson ?: ""
+
+            val eval = calculateTrustScoreUseCase(
+                snapshot = snapshot,
+                simulationState = currentSimulation,
+                expectedGateway = expectedGateway,
+                expectedDns = expectedDns
+            )
 
             val auditId = "AUDIT-${System.currentTimeMillis().toString().takeLast(4)}"
             val nowMs = System.currentTimeMillis()
@@ -88,6 +130,20 @@ class DashboardViewModel(
             )
 
             auditRepository?.updateAuditSession(auditSession)
+
+            // Auto-learn baseline for clean connected network if not yet saved
+            if (baseline == null && snapshot.isConnected && eval.reasons.isEmpty() && snapshot.bssid != "00:00:00:00:00:00") {
+                baselineRepository?.saveBaseline(
+                    BaselineNetworkEntity(
+                        bssid = snapshot.bssid,
+                        ssid = snapshot.ssid,
+                        expectedGateway = snapshot.gatewayIp,
+                        expectedDnsJson = snapshot.dnsServers.firstOrNull() ?: "",
+                        expectedSecurity = snapshot.securityType,
+                        lastSeenMs = nowMs
+                    )
+                )
+            }
 
             // If anomalies are detected, record an incident in Room DB
             if (eval.reasons.isNotEmpty()) {
@@ -121,10 +177,12 @@ class DashboardViewModel(
                 statusSummary = eval.statusSummary
             )
 
-            val msg = if (eval.reasons.isNotEmpty()) {
-                "Audit Saved ($auditId) - ${eval.reasons.size} Threat(s) Logged to DB!"
+            val msg = if (!eval.evaluatedSnapshot.isConnected) {
+                "Audit Completed: Device is currently disconnected from Wi-Fi"
+            } else if (eval.reasons.isNotEmpty()) {
+                "Audit Saved ($auditId) — ${eval.reasons.size} Threat(s) Logged to DB!"
             } else {
-                "Audit Session $auditId Saved to Room DB (Score: ${eval.trustScore}/100)"
+                "Audit Session $auditId Saved to Database (Score: ${eval.trustScore}/100)"
             }
             _auditEvent.emit(msg)
         }

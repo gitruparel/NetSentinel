@@ -6,9 +6,12 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.netsentinel.app.R
 import com.netsentinel.app.databinding.FragmentIncidentLogsBinding
@@ -46,8 +49,17 @@ class IncidentLogsFragment : Fragment() {
         binding.rvIncidentLogs.adapter = adapter
 
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.filteredIncidents.collect { incidents ->
-                adapter.submitList(incidents)
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.filteredIncidents.collect { incidents ->
+                    adapter.submitList(incidents)
+                    if (incidents.isEmpty()) {
+                        binding.layoutEmptyState.visibility = View.VISIBLE
+                        binding.rvIncidentLogs.visibility = View.GONE
+                    } else {
+                        binding.layoutEmptyState.visibility = View.GONE
+                        binding.rvIncidentLogs.visibility = View.VISIBLE
+                    }
+                }
             }
         }
 
@@ -65,6 +77,13 @@ class IncidentLogsFragment : Fragment() {
                 R.id.chip_warning -> viewModel.filterLogs(severity = ThreatSeverity.HIGH)
                 else -> viewModel.filterLogs(severity = null)
             }
+        }
+
+        binding.btnFilterLogs.setOnClickListener {
+            binding.etSearchLogs.text?.clear()
+            binding.chipGroupFilters.check(R.id.chip_all)
+            viewModel.filterLogs(query = "", severity = null)
+            Toast.makeText(requireContext(), "Incident search and filters reset", Toast.LENGTH_SHORT).show()
         }
     }
 

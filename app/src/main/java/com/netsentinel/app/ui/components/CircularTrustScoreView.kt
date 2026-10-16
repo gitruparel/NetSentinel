@@ -12,6 +12,7 @@ import com.netsentinel.app.R
 /**
  * Custom animated canvas view displaying a circular NetTrust score indicator
  * with multi-ring glowing outer arcs, dynamic theme-aware text colors, and status badges.
+ * Scaled with density-independent units (dp/sp) and safe lifecycle handling.
  */
 class CircularTrustScoreView @JvmOverloads constructor(
     context: Context,
@@ -19,50 +20,60 @@ class CircularTrustScoreView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    private val density = context.resources.displayMetrics.density
+    private fun dp(v: Float): Float = v * density
+    private fun sp(v: Float): Float = v * context.resources.displayMetrics.scaledDensity
+
     private var currentScore: Int = 92
     private var animatedScore: Float = 92f
 
     private val outerGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 36f
+        strokeWidth = dp(18f)
         strokeCap = Paint.Cap.ROUND
     }
 
     private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 24f
+        strokeWidth = dp(12f)
         strokeCap = Paint.Cap.ROUND
     }
 
     private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 24f
+        strokeWidth = dp(12f)
         strokeCap = Paint.Cap.ROUND
     }
 
     private val textScorePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 96f
+        textSize = sp(46f)
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         textAlign = Paint.Align.CENTER
     }
 
     private val textLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 30f
+        textSize = sp(14f)
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         textAlign = Paint.Align.CENTER
     }
 
     private val textSubPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 22f
+        textSize = sp(11f)
         textAlign = Paint.Align.CENTER
     }
 
     private val rectF = RectF()
     private var animator: ValueAnimator? = null
 
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        animator?.cancel()
+        animator = null
+    }
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        val padding = 46f
+        val padding = dp(24f)
         rectF.set(padding, padding, w.toFloat() - padding, h.toFloat() - padding)
     }
 
@@ -71,6 +82,7 @@ class CircularTrustScoreView @JvmOverloads constructor(
 
         val centerX = width / 2f
         val centerY = height / 2f
+        if (width <= 0 || height <= 0) return
 
         // Theme-Aware Dynamic Color Resolution
         val primaryTextColor = ContextCompat.getColor(context, R.color.text_primary)
@@ -102,7 +114,7 @@ class CircularTrustScoreView @JvmOverloads constructor(
         canvas.drawArc(rectF, startAngle, currentSweep, false, progressPaint)
 
         // Draw text: Score Number
-        canvas.drawText("${animatedScore.toInt()}", centerX, centerY - 15f, textScorePaint)
+        canvas.drawText("${animatedScore.toInt()}", centerX, centerY - dp(6f), textScorePaint)
 
         // Draw text: Status Label
         val statusText = when {
@@ -111,17 +123,17 @@ class CircularTrustScoreView @JvmOverloads constructor(
             else -> "CRITICAL THREAT"
         }
         textLabelPaint.color = scoreColor
-        canvas.drawText(statusText, centerX, centerY + 35f, textLabelPaint)
+        canvas.drawText(statusText, centerX, centerY + dp(18f), textLabelPaint)
 
         // Draw text: Subtitle
-        canvas.drawText("NetTrust Score (0-100)", centerX, centerY + 75f, textSubPaint)
+        canvas.drawText("NetTrust Score (0-100)", centerX, centerY + dp(38f), textSubPaint)
     }
 
     fun setScore(score: Int, animate: Boolean = true) {
         this.currentScore = score.coerceIn(0, 100)
         animator?.cancel()
 
-        if (animate) {
+        if (animate && isAttachedToWindow) {
             animator = ValueAnimator.ofFloat(animatedScore, score.toFloat()).apply {
                 duration = 1000
                 interpolator = DecelerateInterpolator()

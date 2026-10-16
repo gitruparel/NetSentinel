@@ -17,10 +17,10 @@ class ThreatEngine(
     fun evaluateNetwork(
         snapshot: NetworkSnapshot,
         simulationState: SimulationState = SimulationState(),
-        expectedGateway: String = "192.168.1.1",
-        expectedDns: String = "1.1.1.1"
+        expectedGateway: String = "",
+        expectedDns: String = ""
     ): EvaluationResult {
-        // Build effective snapshot (merging simulation flags if active)
+        // Build effective snapshot (merging simulation flags if active in Dev Sandbox)
         val effectiveSsid = snapshot.ssid
         val effectiveBssid = if (simulationState.isDuplicateSsidActive) "DE:AD:BE:EF:42:01" else snapshot.bssid
         val effectiveGateway = if (simulationState.isGatewayChangeActive) "10.0.4.99" else snapshot.gatewayIp
@@ -29,6 +29,22 @@ class ThreatEngine(
         val effectiveLoss = if (simulationState.isPacketLossActive) 35.0 else snapshot.packetLossPercent
         val effectiveSecurity = if (simulationState.isSecurityDowngradeActive) "Open" else snapshot.securityType
 
+        // Effective baseline expectations for comparison
+        val effectiveExpectedGateway = when {
+            simulationState.isGatewayChangeActive -> if (expectedGateway.isNotEmpty()) expectedGateway else "192.168.1.1"
+            else -> expectedGateway
+        }
+        val effectiveExpectedDns = when {
+            simulationState.isDnsChangeActive -> if (expectedDns.isNotEmpty()) expectedDns else "1.1.1.1"
+            else -> expectedDns
+        }
+
+        val isSimActive = simulationState.isDuplicateSsidActive || simulationState.isGatewayChangeActive ||
+                simulationState.isDnsChangeActive || simulationState.isLatencySpikeActive ||
+                simulationState.isPacketLossActive || simulationState.isSecurityDowngradeActive
+
+        val effectiveConnected = if (isSimActive) true else snapshot.isConnected
+
         val processedSnapshot = snapshot.copy(
             ssid = effectiveSsid,
             bssid = effectiveBssid,
@@ -36,10 +52,23 @@ class ThreatEngine(
             dnsServers = effectiveDns,
             rttMs = effectiveRtt,
             packetLossPercent = effectiveLoss,
-            securityType = effectiveSecurity
+            securityType = effectiveSecurity,
+            isConnected = effectiveConnected
         )
 
         val reasons = mutableListOf<ThreatReason>()
+
+        // If disconnected and no active simulation, report neutral disconnected state
+        if (!processedSnapshot.isConnected) {
+            val fp = fingerprintEngine.generateFingerprint(processedSnapshot)
+            return EvaluationResult(
+                trustScore = 100,
+                statusSummary = "NO ACTIVE CONNECTION",
+                reasons = emptyList(),
+                evaluatedSnapshot = processedSnapshot,
+                fingerprint = fp
+            )
+        }
 
         // 1. Multi-Vector AP Fingerprint Analysis
         val fingerprint = fingerprintEngine.generateFingerprint(processedSnapshot)
@@ -47,7 +76,7 @@ class ThreatEngine(
             val apAssessment = fingerprintEngine.evaluateApVector(
                 snapshot = processedSnapshot,
                 knownBssidsForSsid = listOf("00:1A:2B:3C:4D:5E"),
-                baselineGateway = expectedGateway,
+                baselineGateway = effectiveExpectedGateway.ifEmpty { "192.168.1.1" },
                 baselineSecurity = "WPA3-Enterprise"
             )
             if (apAssessment.deductionPoints > 0) {
@@ -65,8 +94,8 @@ class ThreatEngine(
         // 2. Baseline Deviation Analysis (Defensible Security Reasoning)
         val baselineReasons = baselineAnalyzer.analyzeBaselineDeviation(
             snapshot = processedSnapshot,
-            expectedGateway = expectedGateway,
-            expectedDns = expectedDns
+            expectedGateway = effectiveExpectedGateway,
+            expectedDns = effectiveExpectedDns
         )
         reasons.addAll(baselineReasons)
 

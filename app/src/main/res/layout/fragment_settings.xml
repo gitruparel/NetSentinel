@@ -111,7 +111,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Database (Firebase Firestore &amp; Room Local DB)"
+                    android:text="Database (Supabase PostgreSQL &amp; Room SQLite)"
                     android:textColor="@color/neon_green"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -121,7 +121,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="Database: Firebase Firestore + Room Offline Cache\nStatus: Syncing &amp; Persistence Ready\nIncidents: Loading... | Audits: Loading..."
+                    android:text="Database: Supabase PostgreSQL + Room SQLite Cache\nStatus: Dual-Engine Active (Cloud SQL &amp; Local DB)\nIncidents: Loading... | Audits: Loading..."
                     android:textColor="@color/text_primary"
                     android:textSize="13sp" />
 

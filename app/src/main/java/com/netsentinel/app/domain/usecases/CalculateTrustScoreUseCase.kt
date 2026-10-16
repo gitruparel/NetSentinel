@@ -7,7 +7,12 @@ import com.netsentinel.app.engine.ThreatEngine
 class CalculateTrustScoreUseCase(
     private val threatEngine: ThreatEngine = ThreatEngine()
 ) {
-    operator fun invoke(snapshot: NetworkSnapshot, simulationState: SimulationState): ThreatEngine.EvaluationResult {
-        return threatEngine.evaluateNetwork(snapshot, simulationState)
+    operator fun invoke(
+        snapshot: NetworkSnapshot,
+        simulationState: SimulationState = SimulationState(),
+        expectedGateway: String = "",
+        expectedDns: String = ""
+    ): ThreatEngine.EvaluationResult {
+        return threatEngine.evaluateNetwork(snapshot, simulationState, expectedGateway, expectedDns)
     }
 }

@@ -5,11 +5,14 @@ import com.netsentinel.app.data.model.Incident
 import com.netsentinel.app.data.model.NetworkSnapshot
 import com.netsentinel.app.data.model.TimelineEvent
 import com.netsentinel.app.engine.ThreatSeverity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 
 interface IncidentRepository {
-    fun getAllIncidents(): List<Incident>
-    fun getIncidentById(id: String): Incident?
-    fun addIncident(incident: Incident)
+    fun observeIncidents(): Flow<List<Incident>>
+    suspend fun getAllIncidents(): List<Incident>
+    suspend fun getIncidentById(id: String): Incident?
+    suspend fun addIncident(incident: Incident)
 }
 
 class FakeIncidentRepository : IncidentRepository {
@@ -88,11 +91,16 @@ class FakeIncidentRepository : IncidentRepository {
         )
     )
 
-    override fun getAllIncidents(): List<Incident> = incidentsList
+    private val incidentsFlow = MutableStateFlow(incidentsList.toList())
 
-    override fun getIncidentById(id: String): Incident? = incidentsList.find { it.id == id }
+    override fun observeIncidents(): Flow<List<Incident>> = incidentsFlow
 
-    override fun addIncident(incident: Incident) {
+    override suspend fun getAllIncidents(): List<Incident> = incidentsList.toList()
+
+    override suspend fun getIncidentById(id: String): Incident? = incidentsList.find { it.id == id }
+
+    override suspend fun addIncident(incident: Incident) {
         incidentsList.add(0, incident)
+        incidentsFlow.value = incidentsList.toList()
     }
 }

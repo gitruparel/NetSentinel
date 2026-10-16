@@ -12,6 +12,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import android.media.MediaPlayer
+import android.widget.Toast
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
@@ -23,6 +25,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var navController: NavController
+    private var mediaPlayer: MediaPlayer? = null
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -60,6 +63,65 @@ class MainActivity : AppCompatActivity() {
         binding.bottomNavigation.setupWithNavController(navController)
 
         requestRequiredPermissions()
+    }
+
+    fun playThreatAlarm(onCompletion: (() -> Unit)? = null): Boolean {
+        return try {
+            if (mediaPlayer == null) {
+                mediaPlayer = MediaPlayer.create(this, R.raw.threat_alarm).apply {
+                    setOnCompletionListener {
+                        releaseMediaPlayer()
+                        onCompletion?.invoke()
+                    }
+                }
+            }
+
+            mediaPlayer?.let { player ->
+                if (!player.isPlaying) {
+                    player.start()
+                    Toast.makeText(this, "🚨 ACOUSTIC SIREN DISPATCHED — INTRUSION DETECTED", Toast.LENGTH_SHORT).show()
+                    true
+                } else {
+                    false
+                }
+            } ?: false
+        } catch (e: Exception) {
+            Toast.makeText(this, "Siren Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            false
+        }
+    }
+
+    fun stopThreatAlarm() {
+        try {
+            mediaPlayer?.let { player ->
+                if (player.isPlaying) {
+                    player.stop()
+                }
+            }
+            releaseMediaPlayer()
+            Toast.makeText(this, "🔇 Acoustic Threat Siren Silenced", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            releaseMediaPlayer()
+        }
+    }
+
+    fun isThreatAlarmPlaying(): Boolean = mediaPlayer?.isPlaying == true
+
+    private fun releaseMediaPlayer() {
+        mediaPlayer?.release()
+        mediaPlayer = null
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (mediaPlayer?.isPlaying == true) {
+            stopThreatAlarm()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        releaseMediaPlayer()
     }
 
     fun selectBottomNavItem(itemId: Int) {

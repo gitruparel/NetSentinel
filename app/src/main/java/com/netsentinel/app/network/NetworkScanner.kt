@@ -26,11 +26,18 @@ class NetworkScanner(
     fun captureSnapshot(): NetworkSnapshot {
         val baseState = wifiCollector.getCurrentWifiState()
         val (gateway, dns) = connectivityCollector.getGatewayAndDns()
-        val (rtt, packetLoss) = packetCollector.measureLatencyAndLoss()
+
+        val (rtt, packetLoss) = if (!baseState.isConnected) {
+            Pair(0L, 100.0)
+        } else if (packetCollector is RealPacketCollector) {
+            packetCollector.measureLatencyAndLoss(gateway)
+        } else {
+            packetCollector.measureLatencyAndLoss()
+        }
 
         return baseState.copy(
-            gatewayIp = gateway,
-            dnsServers = dns,
+            gatewayIp = if (baseState.isConnected) gateway else "N/A",
+            dnsServers = if (baseState.isConnected) dns else emptyList(),
             rttMs = rtt,
             packetLossPercent = packetLoss,
             timestampMs = System.currentTimeMillis()

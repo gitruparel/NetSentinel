@@ -12,7 +12,7 @@
 - **Application Type:** Enterprise Mobile Network Security Auditor, Rogue AP Hunter & Forensic Incident Recorder
 - **Target Platform:** Android (Min SDK 26, Target SDK 34, Compile SDK 34)
 - **Language & Stack:** Kotlin 1.9.22, Android Gradle Plugin 8.2.2, Gradle 8.2, Jetpack Architecture (MVVM)
-- **Primary Database:** Dual-Layer Architecture — **Google Firebase Cloud Firestore** (Cloud + Offline Disk Persistence) & **Room SQLite 2.6.1** (Local on-device cache)
+- **Primary Database Architecture:** Dual-Layer Architecture — **Supabase PostgreSQL** (Cloud Relational SQL Database via PostgREST) & **Room SQLite 2.6.1** (Local on-device cache)
 
 ---
 
@@ -21,7 +21,7 @@
 | Task | Course Requirement | NetSentinel Implementation Status | Detailed Features Delivered |
 | :--- | :--- | :--- | :--- |
 | **Task 1** | **Design of Pages & Navigation** | ✅ **COMPLETED** | • 8 fully designed and styled screens.<br>• Dynamic theme resolution supporting both **Dark Cyber Theme** and **Day Light Theme**.<br>• Single-activity 5-tab bottom navigation (`Dashboard`, `Hunt`, `Map`, `Logs`, `Settings`) plus modal/sub-flow screens. |
-| **Task 2** | **Database & Network Logic** | ✅ **COMPLETED** | • Live hardware network telemetry using Android `WifiManager` and `ConnectivityManager`.<br>• Real packet socket RTT latency measurement.<br>• Algorithmic `NetTrustEngine` for real-time security scoring (0–100 scale).<br>• **Firebase Cloud Firestore** with `PersistentCacheSettings` unlimited disk cache.<br>• **Room SQLite** local persistence.<br>• Developer Attack Simulation Sandbox for controlled vulnerability injection. |
+| **Task 2** | **Database & Network Logic** | ✅ **COMPLETED** | • Live hardware network telemetry using Android `WifiManager` and `ConnectivityManager`.<br>• Real packet socket RTT latency measurement.<br>• Algorithmic `NetTrustEngine` for real-time security scoring (0–100 scale).<br>• **Supabase PostgreSQL Cloud Database** with full SQL query demonstration in Supabase SQL Editor.<br>• **Room SQLite** local persistence.<br>• Developer Attack Simulation Sandbox for controlled vulnerability injection. |
 | **Task 3** | **Multimedia, Maps, Location & Sensors** | ✅ **COMPLETED** | • **Audio Radar Synthesizer**: Low-level PCM sine-wave synthesis via Android `AudioTrack` API.<br>• **Dual Map Engines**: Hardware-accelerated 60fps Vector Hex Map (`CyberMapView`) + OpenStreetMap (`osmdroid`) fallback.<br>• **GPS Sensor Integration**: Hardware `LocationManager` latitude/longitude binding.<br>• **Camera Evidence Capture**: Android Camera Intent with secure `FileProvider`.<br>• **Forensic Report Share**: Formatted plain-text forensic report generation (`INCIDENT_REPORT_INC-XXXX.txt`). |
 | **Task 4** | **AI/ML/Chatbot & Predictive Analytics** | ⏳ *Scheduled for Next Phase* | Planned for automated anomaly inference and generative attack mitigation runbooks. |
 
@@ -59,8 +59,8 @@ graph TD
     end
 
     subgraph Data_Storage ["Dual-Layer Persistence Engine"]
-        Firestore[Google Cloud Firestore]
-        FirestoreCache[Firestore Disk Persistence Cache]
+        SupabaseCloud[Supabase PostgreSQL Cloud DB]
+        PostgREST[Supabase PostgREST API Engine]
         RoomDB[Room SQLite Database]
         Repo[Incident & Audit Repositories]
     end
@@ -69,66 +69,99 @@ graph TD
     Domain_Engine --> UI_Layer
     UI_Layer --> Repo
     Repo --> RoomDB
-    Repo --> Firestore
-    Firestore --> FirestoreCache
+    Repo --> PostgREST
+    PostgREST --> SupabaseCloud
 ```
 
 ---
 
 ## 4. Database Architecture & Schema
 
-NetSentinel implements a resilient **Offline-First Dual-Layer Architecture** satisfying both cloud synchronization requirements and offline operational guarantees:
+NetSentinel implements a **Dual-Layer SQL Database Architecture** specifically satisfying the requirement to demonstrate real SQL queries on a relational database:
 
-### A. Firebase Cloud Firestore
-- **SDK:** `com.google.firebase:firebase-bom:32.7.4` + `firebase-firestore-ktx`
-- **Plugin:** `com.google.gms.google-services:4.4.1`
-- **Configuration File:** `app/google-services.json`
-- **Cache Policy:** `PersistentCacheSettings.newBuilder().build()` enabled via `FirestoreManager.kt`. Guarantees zero crashes and full offline persistence when internet connectivity is unavailable.
+### A. Supabase PostgreSQL Cloud Database
+- **Platform:** Supabase (Open-Source Firebase Alternative powered by PostgreSQL)
+- **API Engine:** PostgREST / OkHttp Client (`SupabaseManager.kt`)
+- **Credentials:** Defined in `SupabaseConfig.kt` (`SUPABASE_URL` and `SUPABASE_ANON_KEY`)
+- **Schema File:** `supabase_schema.sql` (located at root of project)
 
-#### Collection 1: `incidents`
-```json
-{
-  "id": "INC-1346",
-  "auditSessionId": "AUDIT-2895",
-  "title": "Hardware Audit Anomaly: ARP_SPOOFING",
-  "timestampFormatted": "2026-09-25 00:54:54",
-  "threatScore": 30,
-  "severity": "HIGH",
-  "status": "FLAGGED",
-  "aiAnalysis": "Gateway IP address changed from 192.168.1.1 to 10.0.2.2. Potential ARP spoofing or unannounced subnet reconfiguration.",
-  "ssid": "AndroidWifi",
-  "bssid": "00:13:10:85:FE:01",
-  "gatewayIp": "10.0.2.2",
-  "securityType": "Open",
-  "gpsCoordinates": "37.421998, -122.084000",
-  "photoUri": null,
-  "syncedAtMs": 1790276094717
-}
+#### Table 1: `public.audit_sessions`
+```sql
+CREATE TABLE public.audit_sessions (
+    id TEXT PRIMARY KEY,
+    start_time_ms BIGINT NOT NULL,
+    end_time_ms BIGINT NOT NULL,
+    trust_score INT NOT NULL,
+    ssid TEXT,
+    bssid TEXT,
+    status TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    synced_at_ms BIGINT
+);
 ```
 
-#### Collection 2: `audit_sessions`
-```json
-{
-  "id": "AUDIT-2895",
-  "startTimeMs": 1790276094151,
-  "endTimeMs": 1790276094151,
-  "trustScore": 30,
-  "ssid": "AndroidWifi",
-  "bssid": "00:13:10:85:FE:01",
-  "status": "ANOMALIES_FLAGGED",
-  "syncedAtMs": 1790276094151
-}
+#### Table 2: `public.incidents`
+```sql
+CREATE TABLE public.incidents (
+    id TEXT PRIMARY KEY,
+    audit_session_id TEXT REFERENCES public.audit_sessions(id) ON DELETE SET NULL,
+    title TEXT NOT NULL,
+    timestamp_formatted TEXT NOT NULL,
+    threat_score INT NOT NULL,
+    severity TEXT NOT NULL,
+    status TEXT NOT NULL,
+    ai_analysis TEXT,
+    ssid TEXT,
+    bssid TEXT,
+    gateway_ip TEXT,
+    security_type TEXT,
+    gps_coordinates TEXT,
+    photo_uri TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    synced_at_ms BIGINT
+);
 ```
 
 ### B. Room SQLite Database (`2.6.1`)
 - **Entities:** `IncidentEntity`, `AuditSessionEntity`
 - **DAOs:** `IncidentDao`, `AuditDao`
-- **Database Class:** `NetSentinelDatabase.kt` (exportSchema = false)
-- **Role:** Immediate local reactive caching via Kotlin Coroutines `Flow`.
+- **Database Class:** `NetSentinelDatabase.kt` (database name: `"netsentinel_security_db"`)
+- **Role:** Local zero-latency on-device SQLite database with pure SQL CRUD operations.
 
 ---
 
-## 5. Algorithmic Threat Detection Engine (`NetTrustEngine`)
+## 5. Pure SQL Queries for Evaluator Demonstration (In Supabase SQL Editor)
+
+When presenting to professors in the **Supabase Web Dashboard ➔ SQL Editor**:
+
+```sql
+-- 1. [READ] Fetch all logged incidents sorted by latest sync
+SELECT id, title, severity, threat_score, status, ssid, timestamp_formatted 
+FROM public.incidents 
+ORDER BY synced_at_ms DESC;
+
+-- 2. [READ] Filter only CRITICAL security threats
+SELECT id, title, threat_score, ai_analysis, security_type 
+FROM public.incidents 
+WHERE severity = 'CRITICAL';
+
+-- 3. [CREATE / INSERT] Manually insert a live security breach in SQL
+INSERT INTO public.incidents (id, title, timestamp_formatted, threat_score, severity, status, ssid)
+VALUES ('INC-SQL-DEMO', 'Manual SQL Rogue Hotspot Injection', '2026-10-09 10:00:00', 95, 'CRITICAL', 'FLAGGED', 'EvilTwin_Lab');
+
+-- 4. [UPDATE] Modify incident status using SQL UPDATE
+UPDATE public.incidents 
+SET status = 'QUARANTINED' 
+WHERE id = 'INC-SQL-DEMO';
+
+-- 5. [DELETE] Delete the record in SQL
+DELETE FROM public.incidents 
+WHERE id = 'INC-SQL-DEMO';
+```
+
+---
+
+## 6. Algorithmic Threat Detection Engine (`NetTrustEngine`)
 
 The **NetTrust Score** is a deterministic, explainable security rating on a scale of **0 to 100**:
 $$\text{NetTrust Score} = 100 - \sum \text{Anomaly Deductions}$$
@@ -145,7 +178,7 @@ $$\text{NetTrust Score} = 100 - \sum \text{Anomaly Deductions}$$
 
 ---
 
-## 6. Multimedia, Sensors & Custom Views (Task 3)
+## 7. Multimedia, Sensors & Custom Views (Task 3)
 
 ### 1. Audio Radar Synthesizer (`AudioRadarSynthesizer.kt`)
 - Generates dynamic acoustic pings using Android's **`AudioTrack`** API in `MODE_STATIC` / `MODE_STREAM`.
@@ -162,21 +195,21 @@ $$\text{NetTrust Score} = 100 - \sum \text{Anomaly Deductions}$$
 
 ---
 
-## 7. Directory Structure & Key Codebase Files
+## 8. Directory Structure & Key Codebase Files
 
 ```
 d:/Coding/NetSentinal/
 ├── app/
-│   ├── google-services.json             # Firebase configuration file
-│   ├── build.gradle.kts                 # App dependencies, plugins & SDK specs
+│   ├── build.gradle.kts                 # App dependencies (OkHttp, Room, Jetpack)
 │   └── src/main/
 │       ├── AndroidManifest.xml          # Permissions, FileProvider, Activities
 │       ├── java/com/netsentinel/app/
 │       │   ├── data/model/              # Incident, AuditSession, NetworkSnapshot
 │       │   ├── database/
-│       │   │   ├── FirestoreManager.kt  # Cloud Firestore API & queries
+│       │   │   ├── SupabaseConfig.kt    # Supabase URL & Anon Key configuration
+│       │   │   ├── SupabaseManager.kt   # PostgREST cloud sync & SQL endpoints
 │       │   │   ├── NetSentinelDatabase  # Room SQLite DB configuration
-│       │   │   ├── dao/                 # IncidentDao, AuditDao
+│       │   │   ├── dao/                 # IncidentDao, AuditDao (Pure SQL methods)
 │       │   │   └── entity/              # IncidentEntity, AuditSessionEntity
 │       │   ├── engine/
 │       │   │   ├── ThreatEngine.kt      # NetTrust core scoring logic
@@ -189,8 +222,8 @@ d:/Coding/NetSentinal/
 │       │   │   ├── RealConnectivity    # Gateway & DNS route resolver
 │       │   │   └── RealPacketCollector  # Socket RTT latency pinger
 │       │   ├── repository/
-│       │   │   ├── RoomIncidentRepository.kt # Dual Room + Firestore incident sync
-│       │   │   └── RoomAuditRepository.kt    # Dual Room + Firestore audit sync
+│       │   │   ├── RoomIncidentRepository.kt # Dual Room SQLite + Supabase sync
+│       │   │   └── RoomAuditRepository.kt    # Dual Room SQLite + Supabase sync
 │       │   ├── ui/
 │       │   │   ├── custom/
 │       │   │   │   ├── CircularTrustScoreView.kt # Hardware-accelerated gauge
@@ -208,13 +241,14 @@ d:/Coding/NetSentinal/
 │           ├── layout/          # All 8 screen XML layouts
 │           ├── values/colors.xml# Theme tokens (Dark Cyber vs Day Light)
 │           └── xml/file_paths.xml # FileProvider paths for photo & report export
+├── supabase_schema.sql          # Ready-to-run PostgreSQL schema script for Supabase
 ├── build.gradle.kts             # Root Gradle plugin definitions
 └── context.md                   # This master source of truth document
 ```
 
 ---
 
-## 8. Live Demonstration Protocols for Evaluators
+## 9. Live Demonstration Protocols for Evaluators
 
 ### Protocol A: Real Hardware Threat Demonstration (The Open Hotspot Test)
 1. Turn on a mobile hotspot from any secondary phone without a password (Security = `None` / `Open`). Name it `Campus_Guest_WiFi`.
@@ -224,42 +258,11 @@ d:/Coding/NetSentinal/
    - SSID and Gateway resolve live.
    - NetTrust Score drops to **30 / 100 (CRITICAL THREAT)**.
    - Alert flags: *"Network security broadcast is unencrypted OPEN! Data transmitted across this channel is vulnerable to eavesdropping."*
-   - Incident is automatically stored in Room SQLite and streamed to Firebase Cloud Firestore.
+   - Incident is automatically stored in Room SQLite and synced to Supabase PostgreSQL.
 
 ### Protocol B: Developer Attack Simulation Sandbox
 1. Navigate to **Settings** ➔ Tap **Open Developer Attack Simulation Sandbox**.
 2. Select any vector (e.g. *Evil Twin AP Rogue Clone* or *ARP Gateway Poisoning Attempt*).
 3. Tap **Inject Attack into Local Threat Database**.
 4. Navigate to **Incident Logs** to inspect the generated threat report.
-5. Open the Firebase Console in any browser to verify real-time document creation in the `incidents` collection.
-
----
-
-## 9. Firestore Queries Reference (Code & Console)
-
-```kotlin
-// 1. Query by severity level
-db.collection("incidents").whereEqualTo("severity", "CRITICAL").get().await()
-
-// 2. Query high-risk threats
-db.collection("incidents").whereGreaterThanOrEqualTo("threatScore", 70).get().await()
-
-// 3. Query recent audit sessions
-db.collection("audit_sessions").orderBy("syncedAtMs", Query.Direction.DESCENDING).limit(10).get().await()
-
-// 4. Real-time stream observation
-db.collection("incidents").addSnapshotListener { snapshot, _ -> /* Live WebSocket Stream */ }
-```
-
----
-
-## 10. Frequently Asked Viva Questions (Quick Reference)
-
-1. **Why use both Firebase Firestore and Room SQLite?**  
-   *Answer:* It provides an offline-first resilient architecture. Room ensures instant zero-latency UI rendering and 100% offline uptime, while Firestore provides real-time multi-device cloud synchronization and administrative inspection.
-2. **What does −50 dBm indicate?**  
-   *Answer:* Decibel-milliwatts (logarithmic RF power relative to 1 mW). Negative because received signals are tiny fractions of a milliwatt. −50 dBm denotes an excellent, high-power signal with high link speed.
-3. **How does the Audio Radar work without audio files?**  
-   *Answer:* It synthesizes pure PCM sine waves in real-time using Android's low-level `AudioTrack` API, dynamically scaling frequency (440 Hz to 1760 Hz) and ping interval proportional to received RSSI.
-4. **How are map tiles loaded without Google Maps API keys?**  
-   *Answer:* NetSentinel implements a custom 60fps Vector Canvas map (`CyberMapView`) as primary radar, backed by OpenStreetMap (`osmdroid`) which consumes open-source community tile servers without proprietary billing locks.
+5. In Supabase Dashboard, open **SQL Editor** and run `SELECT * FROM incidents ORDER BY synced_at_ms DESC;` to show the newly inserted row live in PostgreSQL!

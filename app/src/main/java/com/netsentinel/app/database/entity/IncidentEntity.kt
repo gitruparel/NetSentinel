@@ -21,5 +21,8 @@ data class IncidentEntity(
     val securityType: String,
     val ouiVendor: String,
     val photoUri: String? = null,
-    val gpsCoordinatesFormatted: String = "37.7749° N, 122.4194° W"
+    val gpsCoordinatesFormatted: String = "37.7749° N, 122.4194° W",
+    val frequencyMhz: Int = 2412,
+    val rttMs: Long = 0L,
+    val packetLossPercent: Double = 0.0
 )

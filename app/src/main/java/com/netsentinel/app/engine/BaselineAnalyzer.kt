@@ -9,13 +9,22 @@ class BaselineAnalyzer {
 
     fun analyzeBaselineDeviation(
         snapshot: NetworkSnapshot,
-        expectedGateway: String = "192.168.1.1",
-        expectedDns: String = "1.1.1.1"
+        expectedGateway: String = "",
+        expectedDns: String = ""
     ): List<ThreatReason> {
         val anomalies = mutableListOf<ThreatReason>()
 
-        // Gateway Drift Check
-        if (snapshot.gatewayIp.isNotEmpty() && expectedGateway.isNotEmpty() && snapshot.gatewayIp != expectedGateway) {
+        // If network is disconnected, no baseline deviation to analyze
+        if (!snapshot.isConnected) {
+            return anomalies
+        }
+
+        // 1. Gateway Drift Check
+        // Only trigger if an expected baseline gateway was provided and active gateway has drifted
+        if (expectedGateway.isNotEmpty() && expectedGateway != "N/A" &&
+            snapshot.gatewayIp.isNotEmpty() && snapshot.gatewayIp != "N/A" &&
+            snapshot.gatewayIp != expectedGateway
+        ) {
             anomalies.add(
                 ThreatReason(
                     type = ThreatType.ARP_SPOOFING,
@@ -26,19 +35,31 @@ class BaselineAnalyzer {
             )
         }
 
-        // DNS Resolver Check
-        if (snapshot.dnsServers.isNotEmpty() && !snapshot.dnsServers.contains(expectedDns)) {
+        // 2. DNS Resolver Check
+        // Trigger if:
+        // a) An expected baseline DNS was provided and active resolvers do not contain it
+        // OR b) The active resolver belongs to a known test/interception address (e.g. 198.51.100.42)
+        val hasKnownRogueDns = snapshot.dnsServers.any { it.startsWith("198.51.100.") || it == "10.0.4.99" }
+        val hasBaselineDnsDrift = expectedDns.isNotEmpty() && snapshot.dnsServers.isNotEmpty() && !snapshot.dnsServers.contains(expectedDns)
+
+        if (hasKnownRogueDns || hasBaselineDnsDrift) {
+            val reportedDns = snapshot.dnsServers.firstOrNull() ?: "Unknown"
+            val detail = if (hasKnownRogueDns) {
+                "Untrusted test/interception resolver detected: $reportedDns"
+            } else {
+                "DNS Resolver changed to $reportedDns (Expected: $expectedDns)"
+            }
             anomalies.add(
                 ThreatReason(
                     type = ThreatType.ROGUE_DNS,
                     severity = ThreatSeverity.CRITICAL,
-                    message = "DNS Resolver changed! Active resolver: ${snapshot.dnsServers.firstOrNull()} (Expected: $expectedDns). High risk of DNS redirection.",
+                    message = "$detail. High risk of DNS redirection.",
                     deductionPoints = 40
                 )
             )
         }
 
-        // Defensible RTT Latency Path Anomaly
+        // 3. Defensible RTT Latency Path Anomaly
         if (snapshot.rttMs > 250) {
             anomalies.add(
                 ThreatReason(
@@ -50,8 +71,8 @@ class BaselineAnalyzer {
             )
         }
 
-        // Defensible Packet Loss Connectivity Anomaly
-        if (snapshot.packetLossPercent > 20.0) {
+        // 4. Defensible Packet Loss Connectivity Anomaly (only when connected with partial loss)
+        if (snapshot.packetLossPercent > 20.0 && snapshot.packetLossPercent < 100.0) {
             anomalies.add(
                 ThreatReason(
                     type = ThreatType.PACKET_JAMMING,
@@ -62,8 +83,9 @@ class BaselineAnalyzer {
             )
         }
 
-        // Security Downgrade Check
-        if (snapshot.securityType.equals("Open", ignoreCase = true) || snapshot.securityType.contains("None", ignoreCase = true)) {
+        // 5. Security Downgrade Check (Open unencrypted network)
+        val sec = snapshot.securityType.lowercase()
+        if (sec.contains("open") || (sec.contains("none") && !sec.contains("disconnected"))) {
             anomalies.add(
                 ThreatReason(
                     type = ThreatType.SECURITY_DOWNGRADE,

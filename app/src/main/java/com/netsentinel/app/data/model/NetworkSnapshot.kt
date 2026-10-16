@@ -15,12 +15,15 @@ data class NetworkSnapshot(
     val packetLossPercent: Double,
     val timestampMs: Long = System.currentTimeMillis(),
     val latitude: Double = 37.7749,
-    val longitude: Double = -122.4194
+    val longitude: Double = -122.4194,
+    val isConnected: Boolean = true,
+    val requiresPermission: Boolean = false
 ) {
     val signalQualityPercentage: Int
         get() = when {
+            !isConnected || rssi <= -100 -> 0
             rssi >= -50 -> 100
-            rssi <= -100 -> 0
             else -> 2 * (rssi + 100)
         }
 }
+

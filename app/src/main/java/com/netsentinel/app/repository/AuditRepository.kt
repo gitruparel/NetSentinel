@@ -1,14 +1,13 @@
 package com.netsentinel.app.repository
 
 import com.netsentinel.app.data.model.AuditSession
-import com.netsentinel.app.data.model.NetworkSnapshot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 interface AuditRepository {
-    fun getCurrentAuditSession(): AuditSession
     fun observeAuditSession(): Flow<AuditSession>
-    fun updateAuditSession(session: AuditSession)
+    suspend fun getCurrentAuditSession(): AuditSession
+    suspend fun updateAuditSession(session: AuditSession)
 }
 
 class FakeAuditRepository(
@@ -26,11 +25,11 @@ class FakeAuditRepository(
         )
     )
 
-    override fun getCurrentAuditSession(): AuditSession = sessionState.value
+    override suspend fun getCurrentAuditSession(): AuditSession = sessionState.value
 
     override fun observeAuditSession(): Flow<AuditSession> = sessionState
 
-    override fun updateAuditSession(session: AuditSession) {
+    override suspend fun updateAuditSession(session: AuditSession) {
         sessionState.value = session
     }
 }
